@@ -1,0 +1,1 @@
+# TextManager_2025
