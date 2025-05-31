@@ -176,6 +176,7 @@ onMounted(() => {
   max-width: 900px; /* Wider search area */
   margin-left: auto;
   margin-right: auto;
+  box-sizing: border-box;
 }
 
 /* Using global styles for input, select, button from App.vue */
@@ -289,5 +290,8 @@ onMounted(() => {
   font-size: 0.95rem;
   color: #495057;
   padding: 0 0.5rem;
+}
+.some-element {
+  width: 1300px; /* 如果视口小于1300px，就会出现滚动条 */
 }
 </style>

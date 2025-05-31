@@ -1,14 +1,22 @@
 <template>
   <nav class="navbar">
     <div class="navbar-container">
-      <div class="navbar-brand">
-        <router-link to="/" class="brand-text">
-          <svg><!-- 可以放一个简单的SVG Logo -->
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+    <div class="navbar-brand">
+      <router-link to="/" class="brand-text">
+        <span class="brand-logo-wrapper">
+          <svg class="brand-logo" viewBox="0 0 24 24">
+            <defs>
+              <linearGradient id="logo-gradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#1976d2"/>
+                <stop offset="100%" stop-color="#42b983"/>
+              </linearGradient>
+            </defs>
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="url(#logo-gradient)"/>
           </svg>
-          文章管理器
-        </router-link>
-      </div>
+        </span>
+        <span class="brand-title">文章管理器</span>
+      </router-link>
+    </div>
       <div class="navbar-menu">
         <router-link to="/home" class="navbar-item">首页</router-link>
         <router-link v-if="isAuthenticated" to="/drafts" class="navbar-item">草稿箱</router-link>
@@ -84,11 +92,41 @@ const handleLogout = async () => {
   display: flex;
   align-items: center;
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 900;
   color: #1976d2;
   letter-spacing: 2.5px;
   text-shadow: 0 2px 12px rgba(21,101,192,0.10);
   transition: color 0.2s;
+  padding: 0.2rem 1.2rem 0.2rem 0.2rem;
+  border-radius: 1.2rem;
+  text-decoration: none; /* 确保没有下划线 */
+}
+
+.brand-logo-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e3f0ff 60%, #c8e6c9 100%);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  margin-right: 14px;
+  box-shadow: 0 2px 8px rgba(25,118,210,0.10);
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  display: block;
+}
+
+.brand-title {
+  font-size: 2rem;
+  font-weight: 900;
+  background: linear-gradient(90deg, #1976d2 20%, #42b983 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .navbar-brand .brand-text:hover {
