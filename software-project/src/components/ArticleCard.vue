@@ -46,50 +46,87 @@ const formatDate = (dateString) => {
 <style scoped>
 .article-card {
   background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  border-radius: 0.5rem; /* 更大的圆角 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* 更柔和且弥散的阴影 */
   overflow: hidden;
-  margin-bottom: 20px;
+  /* margin-bottom: 20px; */ /* 由父容器的 gap 控制 */
   cursor: pointer;
-  transition: transform 0.2s ease-in-out;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  display: flex; /* 允许更灵活的内部布局 */
+  flex-direction: column;
+  height: 100%; /* 配合 grid 布局填满单元格 */
 }
+
 .article-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
+
 .article-cover {
   width: 100%;
-  height: 200px;
+  height: 180px; /* 调整封面高度 */
   object-fit: cover;
+  border-bottom: 1px solid #eee; /* 图片和内容间的细微分割 */
 }
+
 .article-content {
-  padding: 15px;
-}
-.article-title {
-  font-size: 1.4em;
-  margin-top: 0;
-  margin-bottom: 10px;
-  color: #333;
-}
-.article-excerpt {
-  font-size: 0.95em;
-  color: #666;
-  margin-bottom: 15px;
-  line-height: 1.6;
-}
-.article-meta {
-  font-size: 0.85em;
-  color: #888;
+  padding: 1rem; /* 调整内边距 */
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  flex-grow: 1; /* 使内容区域填满剩余空间 */
 }
+
+.article-title {
+  font-size: 1.25rem; /* 调整标题大小 */
+  margin-top: 0;
+  margin-bottom: 0.5rem; /* 减小与摘要的间距 */
+  color: #212529; /* 更深的标题颜色 */
+  font-weight: 600;
+  line-height: 1.3;
+  /* 多行文字溢出省略 (可选) */
+  /* display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis; */
+}
+
+.article-excerpt {
+  font-size: 0.9rem; /* 调整摘要字体 */
+  color: #6c757d; /* 中性灰色 */
+  margin-bottom: 1rem; /* 增大与元数据的间距 */
+  line-height: 1.5;
+  flex-grow: 1; /* 使摘要区域也参与空间分配 */
+  /* 多行文字溢出省略 (可选) */
+  /* display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis; */
+}
+
+.article-meta {
+  font-size: 0.8rem; /* 调整元数据字体 */
+  color: #868e96;
+  display: flex;
+  flex-wrap: wrap; /* 允许换行 */
+  gap: 0.5rem 1rem; /* 行间距和项间距 */
+  margin-top: auto; /* 将元数据推到底部 */
+  padding-top: 0.5rem; /* 与上方内容间距 */
+  border-top: 1px solid #f1f3f5; /* 元数据与摘要的细微分割 */
+}
+
 .article-meta span {
-  margin-right: 15px;
+  margin-right: 0; /* 通过 gap 控制间距 */
+  display: flex; /* 用于图标对齐（如果未来添加图标） */
+  align-items: center;
 }
+
 .article-meta .category {
-  background-color: #e7f3ff;
-  color: #007bff;
-  padding: 2px 6px;
-  border-radius: 4px;
+  background-color: #e0e7ff; /* 调整分类标签颜色 */
+  color: #4338ca;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.2rem;
+  font-weight: 500;
 }
 </style>
