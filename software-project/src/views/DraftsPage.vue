@@ -1,235 +1,196 @@
 <template>
-  <div class="article-detail-page">
-    <div v-if="isLoading" class="loading-indicator">加载文章详情...</div>
+  <div class="drafts-page">
+    <h2>我的草稿</h2>
+
+    <div v-if="isLoading" class="loading-indicator">加载草稿中...</div>
     <div v-if="error" class="error-message">{{ error }}</div>
 
-    <article v-if="article && !isLoading" class="article-content-wrapper">
-      <header class="article-header">
-        <h1>{{ article.title }}</h1>
-        <div class="article-meta">
-          <span>作者: {{ article.author?.username || '未知' }}</span> |
-          <span>发布于: {{ formatDate(article.created_at) }}</span> |
-          <span v-if="article.category_details">分类: {{ article.category_details?.name || '未分类' }}</span>
-          <span v-if="article.updated_at !== article.created_at"> | 最后更新: {{ formatDate(article.updated_at) }}</span>
+    <div v-if="!isLoading && drafts.length === 0 && !error" class="no-drafts">
+      <p>你还没有草稿。 <router-link to="/editor">开始写作</router-link></p>
+    </div>
+
+    <div v-else class="drafts-list">
+      <div v-for="draft in drafts" :key="draft.id" class="draft-item">
+        <div class="draft-info">
+          <h3 class="draft-title">{{ draft.title || '无标题草稿' }}</h3>
+          <p class="draft-meta">
+            最后更新: {{ formatDate(draft.updated_at) }} |
+            分类: {{ getCategoryName(draft.category) || '未分类' }}
+          </p>
         </div>
-        <div class="article-actions" v-if="canEditOrDelete">
-          <router-link :to="{ name: 'ArticleEditor', params: { id: article.id } }" class="action-btn edit">编辑</router-link>
-          <button @click="handleDeleteArticle" class="action-btn delete" :disabled="isDeleting">
-            {{ isDeleting ? '删除中...' : '删除' }}
+        <div class="draft-actions">
+          <router-link :to="{ name: 'ArticleEditor', params: { id: draft.id } }" class="action-button edit">
+            编辑
+          </router-link>
+          <button @click="deleteDraft(draft.id)" class="action-button delete" :disabled="isDeleting === draft.id">
+            {{ isDeleting === draft.id ? '删除中...' : '删除' }}
           </button>
         </div>
-      </header>
-
-      <div v-if="article.cover_image" class="article-cover-image">
-        <img :src="article.cover_image" :alt="article.title">
       </div>
-      
-      <!-- Using v-html for content from RichTextEditor. Ensure content is sanitized on backend or frontend if from untrusted sources -->
-      <div class="article-body" v-html="article.content"></div>
-      <!-- If content is markdown, you'd use a markdown renderer here -->
-
-      <hr class="separator" />
-
-      <CommentList :article-id="articleId" />
-    </article>
-
-    <div v-if="!article && !isLoading && !error" class="not-found">
-      <p>文章未找到或无法加载。</p>
-      <router-link to="/home">返回首页</router-link>
+    </div>
+     <!-- Pagination if needed, assuming fetchArticles in store handles pagination for drafts -->
+     <div v-if="pagination.totalPages > 1 && drafts.length > 0" class="pagination-controls">
+        <button @click="changePage(pagination.currentPage - 1)" :disabled="!pagination.previous">上一页</button>
+        <span>第 {{ pagination.currentPage }} / {{ pagination.totalPages }} 页</span>
+        <button @click="changePage(pagination.currentPage + 1)" :disabled="!pagination.next">下一页</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useStore } from 'vuex';
-import { useRoute, useRouter } from 'vue-router';
-import CommentList from '@/components/CommentList.vue'; // Import comment component
+import { useRouter } from 'vue-router'; // useRouter might not be needed here unless for programmatic nav
 
 const store = useStore();
-const route = useRoute();
-const router = useRouter();
+const isDeleting = ref(null); // Store ID of draft being deleted
 
-const articleId = ref(route.params.id);
-const isDeleting = ref(false);
-
-const article = computed(() => store.getters['article/currentArticleDetail']);
+// Corrected: drafts should come from allArticles, filtered by status='draft'
+// The fetchDrafts function will dispatch fetchArticles with status='draft'
+const drafts = computed(() => store.getters['article/allArticles']);
+const categories = computed(() => store.getters['article/allCategories']); // For displaying category name
 const isLoading = computed(() => store.getters['article/articleIsLoading']);
 const error = computed(() => store.getters['article/articleError']);
-const currentUser = computed(() => store.getters['user/currentUser']);
-const isAdmin = computed(() => store.getters['user/isAdmin']);
+const pagination = computed(() => store.getters['article/articlePagination']);
+// const currentUser = computed(() => store.getters['user/currentUser']); // Not strictly needed if backend filters by user
 
-const canEditOrDelete = computed(() => {
-  if (!currentUser.value || !article.value) return false;
-  return isAdmin.value || article.value.author?.id === currentUser.value.id;
-});
-
-const fetchArticle = (id) => {
-  store.dispatch('article/fetchArticleById', id).catch(err => {
-    console.error("Failed to load article in component:", err);
-    // Error is handled by computed 'error'
+const fetchDraftsPageData = (page = 1) => {
+  // Fetch categories if not already loaded or needed for display logic
+  if (categories.value.length === 0) {
+    store.dispatch('article/fetchCategories');
+  }
+  // Fetch draft articles for the current user
+  store.dispatch('article/fetchArticles', {
+    status: 'draft',
+    page: page
+    // Backend should automatically filter by request.user for drafts
   });
 };
 
 onMounted(() => {
-  fetchArticle(articleId.value);
+  fetchDraftsPageData(1); // Load first page of drafts
 });
 
-// Watch for route param changes if navigating between article details
-watch(() => route.params.id, (newId) => {
-  if (newId && newId !== articleId.value) {
-    articleId.value = newId;
-    fetchArticle(newId);
+const deleteDraft = async (draftId) => {
+  if (!confirm('确定要删除这篇草稿吗？')) return;
+  isDeleting.value = draftId;
+  try {
+    await store.dispatch('article/deleteArticle', draftId);
+    // List will update via Vuex. If current page becomes empty, consider fetching previous page.
+    if (drafts.value.length === 0 && pagination.value.currentPage > 1) {
+        fetchDraftsPageData(pagination.value.currentPage - 1);
+    }
+  } catch (err) {
+    console.error('Failed to delete draft:', err);
+    // Display error to user if needed, Vuex store might already handle it
+  } finally {
+    isDeleting.value = null;
   }
-});
+};
 
 const formatDate = (dateString) => {
-  if (!dateString) return '';
+  if (!dateString) return '未知日期';
   return new Date(dateString).toLocaleString();
 };
 
-const handleDeleteArticle = async () => {
-  if (!article.value || !confirm('确定要删除这篇文章吗？此操作不可撤销。')) return;
-  isDeleting.value = true;
-  try {
-    await store.dispatch('article/deleteArticle', article.value.id);
-    router.push('/home'); // Redirect after deletion
-  } catch (err) {
-    console.error('Failed to delete article:', err);
-    // Display error to user
-  } finally {
-    isDeleting.value = false;
-  }
+const getCategoryName = (categoryId) => {
+  const category = categories.value.find(cat => cat.id === categoryId);
+  return category ? category.name : '未分类';
 };
 
-// Make sure to clean up currentArticle when component is unmounted
-// or before fetching a new one to avoid showing old data briefly.
-// Vuex action for fetchArticleById should set currentArticle to null initially
-// or component can do it before dispatching.
-// onBeforeUnmount(() => {
-//   store.commit('article/SET_CURRENT_ARTICLE', null);
-// });
+const changePage = (newPage) => {
+  if (newPage >= 1 && newPage <= pagination.value.totalPages) {
+    fetchDraftsPageData(newPage);
+  }
+};
 </script>
 
 <style scoped>
-.article-detail-page {
-  max-width: 800px; /* Or a bit wider for readability */
+.drafts-page {
+  max-width: 900px;
   margin: 20px auto;
   padding: 20px;
+}
+.drafts-page h2 {
+  text-align: center;
+  margin-bottom: 30px;
+}
+.no-drafts {
+  text-align: center;
+  padding: 30px;
+  font-size: 1.1em;
+  color: #666;
+}
+.drafts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+.draft-item {
   background-color: #fff;
+  padding: 15px 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
-.article-header {
-  margin-bottom: 25px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eee;
+.draft-info .draft-title {
+  margin: 0 0 5px 0;
+  font-size: 1.2em;
+  color: #333;
+  cursor: pointer; /* Optional: if title click also navigates to editor */
 }
-.article-header h1 {
-  font-size: 2.2em;
-  color: #2c3e50;
-  margin-top: 0;
-  margin-bottom: 10px;
-  line-height: 1.3;
+.draft-info .draft-title:hover {
+  text-decoration: underline; /* Optional */
 }
-.article-meta {
+.draft-info .draft-meta {
   font-size: 0.9em;
-  color: #7f8c8d;
-  margin-bottom: 15px;
+  color: #777;
+  margin: 0;
 }
-.article-meta span {
-  margin-right: 8px;
+.draft-actions {
+  display: flex;
+  gap: 10px;
 }
-.article-actions {
-  margin-top: 10px;
-}
-.action-btn {
-  margin-right: 10px;
+.action-button {
   padding: 6px 12px;
   text-decoration: none;
   border-radius: 4px;
   font-size: 0.9em;
+  cursor: pointer;
+  border: 1px solid transparent;
 }
-.action-btn.edit {
-  background-color: #3498db;
+.action-button.edit {
+  background-color: #42b983;
   color: white;
-  border: none;
 }
-.action-btn.delete {
-  background-color: #e74c3c;
+.action-button.edit:hover {
+  background-color: #3aa875;
+}
+.action-button.delete {
+  background-color: #f14668;
   color: white;
-  border: none;
 }
-.action-btn:disabled {
-  background-color: #bdc3c7;
+.action-button.delete:hover {
+  background-color: #ee3058;
 }
-
-.article-cover-image {
-  margin-bottom: 25px;
+.action-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
-.article-cover-image img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 6px;
-}
-
-.article-body {
-  font-size: 1.1em;
-  line-height: 1.7;
-  color: #34495e;
-  word-wrap: break-word; /* Ensure long words don't break layout */
-}
-/* Basic styling for HTML content from Rich Text Editor */
-.article-body :deep(p) {
-  margin-bottom: 1em;
-}
-.article-body :deep(h1), .article-body :deep(h2), .article-body :deep(h3) {
-  margin-top: 1.5em;
-  margin-bottom: 0.8em;
-  line-height: 1.4;
-}
-.article-body :deep(ul), .article-body :deep(ol) {
-  padding-left: 1.5em;
-  margin-bottom: 1em;
-}
-.article-body :deep(blockquote) {
-  margin-left: 0;
-  padding-left: 1em;
-  border-left: 3px solid #bdc3c7;
-  color: #7f8c8d;
-  font-style: italic;
-}
-.article-body :deep(pre), .article-body :deep(code-block) { /* For code blocks from Quill */
-  background-color: #f0f0f0;
-  padding: 1em;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin-bottom: 1em;
-  font-family: 'Courier New', Courier, monospace;
-}
-.article-body :deep(img) {
-    max-width: 100%;
-    height: auto;
-    border-radius: 4px;
-    margin: 1em 0;
-}
-
-.separator {
-  margin: 40px 0;
-  border: 0;
-  border-top: 1px solid #eee;
-}
-.not-found {
+.loading-indicator, .error-message {
   text-align: center;
-  padding: 50px 20px;
+  padding: 20px;
 }
-.not-found p {
-  font-size: 1.2em;
-  color: #e74c3c;
-  margin-bottom: 20px;
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 30px;
+  gap: 10px;
 }
-.not-found a {
-  color: #3498db;
-  text-decoration: none;
+.pagination-controls button {
+  padding: 8px 15px;
 }
 </style>

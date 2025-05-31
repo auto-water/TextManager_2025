@@ -57,10 +57,12 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-/* Import or reuse styles from RegisterPage.vue or a common auth CSS file */
-@import './RegisterPage.vue'; /* This might not work directly, better to have shared styles */
-/* If @import doesn't work as expected in <style scoped>, define common styles in App.vue or a global CSS */
-.auth-form-container { /* Copied for clarity */
+/* 移除: @import './RegisterPage.vue'; */
+
+/* 如果需要，将 RegisterPage.vue 中共享的样式直接复制粘贴到这里，
+   或者最好是创建一个共享的 CSS 文件并在 App.vue 或 main.js 中全局引入 */
+
+.auth-form-container { /* Copied for clarity for now */
   max-width: 400px;
   margin: 50px auto;
   padding: 30px;

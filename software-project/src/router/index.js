@@ -4,6 +4,7 @@ import store from '../store'
 
 const RegisterPage = () => import('../views/RegisterPage.vue')
 const LoginPage = () => import('../views/LoginPage.vue')
+
 const HomePage = () => import('../views/HomePage.vue')
 const ArticleEditor = () => import('../views/ArticleEditor.vue')
 const DraftsPage = () => import('../views/DraftsPage.vue')

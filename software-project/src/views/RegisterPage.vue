@@ -49,6 +49,7 @@ const isLoading = ref(false);
 const error = computed(() => store.getters['user/authError']);
 
 const handleSubmit = async () => {
+  // 前端的密码一致性检查仍然保留，这是一个好的用户体验
   if (formData.password !== formData.passwordConfirm) {
     store.commit('user/SET_ERROR', '两次输入的密码不一致');
     return;
@@ -60,7 +61,8 @@ const handleSubmit = async () => {
     await store.dispatch('user/registerUser', {
       username: formData.username,
       email: formData.email,
-      password: formData.password
+      password: formData.password,
+      password2: formData.passwordConfirm // <--- 修改这里：添加 password2 字段
     });
     // 注册成功后，可以提示用户去登录，或者根据后端逻辑跳转
     alert('注册成功！请登录。'); // 简单的提示
@@ -68,6 +70,9 @@ const handleSubmit = async () => {
   } catch (err) {
     // Error is already set in Vuex action, so just log it or do nothing
     console.error('Registration failed in component:', err.message);
+    // 注意：err.message 现在可能就是后端返回的 JSON 字符串，
+    // Vuex action 中应该更好地处理它，将其解析为可读的错误信息。
+    // 如果 store.getters['user/authError'] 已经是处理过的字符串，那么这里就不需要额外处理。
   } finally {
     isLoading.value = false;
   }
