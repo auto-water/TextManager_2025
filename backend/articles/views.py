@@ -3,7 +3,51 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import Article, Comment, Category
 from .serializers import ArticleSerializer, CommentSerializer, CategorySerializer
 from .permissions import IsAuthorOrReadOnly, IsAdminOrReadOnly
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+import re
+from zhipuai import ZhipuAI
 
+class GenerateSummaryAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        content = request.data.get('content')
+        if not content:
+            return Response({'error': '文章内容不能为空'}, status=status.HTTP_400_BAD_REQUEST)
+
+        api_key = '5313f3660c534a2b97eb83ba02906a05.pyYdht4IRrzxQAaL'
+        if not api_key:
+            return Response({'error': 'API密钥未配置'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            # 使用官方SDK调用
+            client = ZhipuAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="glm-z1-flash",
+                messages=[
+                    {"role": "user", "content": f"仅输出以下内容的摘要，不要包含任何其他文字：{content}"}
+                ],
+                max_tokens=1000,
+                temperature=0.2
+            )
+            
+            if response.choices and response.choices[0].message.content:
+                summary = response.choices[0].message.content
+
+                # 使用正则表达式移除 <think> 标签及其内容
+                summary = re.sub(r'<think>.*?</think>', '', summary, flags=re.DOTALL).strip()
+
+                return Response({'summary': summary}, status=status.HTTP_200_OK)
+            else:
+                return Response({'error': '摘要生成失败'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        except Exception as e:
+            print(f'API调用异常: {str(e)}')
+            return Response({'error': f'摘要生成失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.select_related('author', 'category').all() # 优化查询
     serializer_class = ArticleSerializer

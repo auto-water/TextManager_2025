@@ -40,6 +40,17 @@
 
       <hr class="separator" />
 
+      <!-- AI摘要按钮 -->
+      <div class="ai-summary">
+        <button @click="generateAbstract" class="button is-primary is-small">点击生成AI摘要</button>
+      </div>
+
+      <!-- 显示生成的摘要 -->
+      <div v-if="abstract" class="ai-abstract">
+        <h3>AI生成的摘要：</h3>
+        <p>{{ abstract }}</p>
+      </div>
+
       <!-- 评论组件 -->
       <CommentList :article-id="articleId" />
     </article>
@@ -57,7 +68,9 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
 import CommentList from '@/components/CommentList.vue';
+
 
 const store = useStore();
 const route = useRoute();
@@ -65,6 +78,7 @@ const router = useRouter();
 
 const articleId = ref(route.params.id);
 const isDeleting = ref(false);
+const abstract = ref(''); // 用于存储生成的摘要
 
 const article = computed(() => store.getters['article/currentArticleDetail']);
 const isLoading = computed(() => store.getters['article/articleIsLoading']);
@@ -127,12 +141,61 @@ const handleDeleteArticle = async () => {
   }
 };
 
+const generateAbstract = async () => {
+  if (!article.value || !article.value.content) {
+    abstract.value = '无法生成摘要，因为文章内容为空。';
+    return;
+  }
+
+  try {
+    const apiUrl = 'http://localhost:8000/api/generate-summary/';
+    const requestBody = {
+      content: article.value.content,
+    };
+
+    const token = localStorage.getItem('user_token');
+    if (!token) {
+      abstract.value = '无法生成摘要，用户未登录或 Token 缺失。';
+      return;
+    }
+
+    const response = await axios.post(apiUrl, requestBody, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.data && response.data.summary) {
+      abstract.value = response.data.summary;
+    } else {
+      abstract.value = '无法生成摘要，请稍后重试。';
+    }
+  } catch (error) {
+    console.error('生成摘要失败:', error);
+    abstract.value = '生成摘要时发生错误，请稍后重试。';
+  }
+};
+
 onBeforeUnmount(() => {
   store.commit('article/SET_CURRENT_ARTICLE', null);
 });
 </script>
 
 <style scoped>
+/* AI摘要按钮样式 */
+.ai-summary {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+/* AI摘要内容样式 */
+.ai-abstract {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
 .article-detail-page {
   max-width: 800px;
   margin: 20px auto;
