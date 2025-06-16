@@ -1,0 +1,103 @@
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden; /* 防止水平滚动 */
+  box-sizing: border-box;
+  background-color: #f8fafc;
+  color: #333;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+}
+
+#app {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0; /* 移除顶部边距 */
+  font-weight: normal;
+  overflow-x: hidden; /* 防止水平滚动 */
+  box-sizing: border-box;
+  min-height: 100vh;
+}
+
+.content-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  background-color: white;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.03);
+  border-radius: 10px;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+a,
+.green {
+  text-decoration: none;
+  color: #1976d2;
+  transition: all 0.3s ease;
+  padding: 3px;
+  border-radius: 4px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: rgba(25, 118, 210, 0.1);
+    color: #0d47a1;
+  }
+  
+  a.no-highlight:hover {
+    background-color: transparent;
+  }
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #2c3e50;
+  line-height: 1.4;
+  margin-top: 1.5em;
+  margin-bottom: 0.8em;
+}
+
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+p {
+  margin-bottom: 1.5rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  body {
+    display: block;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+    padding: 0;
+  }
+  
+  .content-container {
+    padding: 3rem 2.5rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+}

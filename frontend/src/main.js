@@ -5,6 +5,8 @@ import router from './router' // 引入路由配置
 import store from './store'   // 引入 Vuex store
 import axios from 'axios'
 
+import './assets/main.css'
+
 // 配置 Axios 默认 baseURL (根据你的后端API地址调整)
 axios.defaults.baseURL = 'http://localhost:8000/api'; // Django 开发服务器地址
 

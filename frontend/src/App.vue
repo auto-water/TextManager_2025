@@ -1,13 +1,15 @@
 <template>
   <div id="app-container">
     <Navbar />
-    <main class="main-content">
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
-    </main>
+    <div class="content-container">
+      <main class="main-content">
+        <router-view v-slot="{ Component }">
+          <transition name="fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </main>
+    </div>
     <Footer />
   </div>
 </template>
@@ -47,11 +49,19 @@ body {
   min-height: 100vh;
 }
 
-.main-content {
+.content-container {
   flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   padding: 24px; /* 稍微增加内边距 */
   max-width: 1200px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.main-content {
   width: 100%;
   box-sizing: border-box;
 }
