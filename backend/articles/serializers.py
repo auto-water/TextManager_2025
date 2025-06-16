@@ -9,19 +9,26 @@ class RecursiveCategorySerializer(serializers.Serializer):
         return serializer.data
 
 class CategorySerializer(serializers.ModelSerializer):
-    # parent = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(), allow_null=True, required=False)
-    # children = RecursiveCategorySerializer(many=True, read_only=True) # 如果需要显示子分类树
-    parent_id = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(), source='parent', allow_null=True, required=False, write_only=True
+    # 用于接收前端传来的 parent_id (创建/更新时)
+    # source='parent' 意味着它会作用于模型的 'parent' 字段
+    parent = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        allow_null=True, # 顶级分类的 parent 是 null
+        required=False   # 创建顶级分类时不需要提供 parent
     )
+    # parent_details 仍然可以保留，用于前端可能需要显示父分类名称等详细信息
     parent_details = serializers.SerializerMethodField(read_only=True)
     children_count = serializers.SerializerMethodField(read_only=True)
 
-
     class Meta:
         model = Category
-        fields = ['id', 'name', 'parent_id', 'parent_details', 'children_count'] # 'children'
-        # depth = 1 # 可以自动嵌套一层，但控制力较弱
+        fields = [
+            'id',
+            'name',
+            'parent',         # <--- 核心改动：直接输出 parent 字段 (其值为父ID或null)
+            'parent_details',
+            'children_count'
+        ]
 
     def get_parent_details(self, obj):
         if obj.parent:

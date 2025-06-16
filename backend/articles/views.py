@@ -49,37 +49,94 @@ class GenerateSummaryAPIView(APIView):
             return Response({'error': f'摘要生成失败: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 class ArticleViewSet(viewsets.ModelViewSet):
-    queryset = Article.objects.select_related('author', 'category').all() # 优化查询
+    queryset = Article.objects.select_related('author', 'category').all()
     serializer_class = ArticleSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category', 'status', 'author__username'] # 按分类、状态、作者用户名过滤
-    search_fields = ['title', 'content', 'excerpt'] # 按标题、内容、摘要搜索
-    ordering_fields = ['created_at', 'updated_at', 'title'] # 可排序字段
+    # 从 filterset_fields 中移除 'category'，因为我们将自定义处理它
+    filterset_fields = {
+        'status': ['exact'],
+        'author__username': ['exact', 'icontains'], # 示例：允许精确和包含查询
+        # 'category': ['exact'], # 我们将手动处理 category
+    }
+    search_fields = ['title', 'content', 'excerpt']
+    ordering_fields = ['created_at', 'updated_at', 'title']
+
+    def _get_category_with_descendants(self, category_id):
+        """
+        辅助函数，获取给定分类ID及其所有子孙分类的ID列表。
+        """
+        try:
+            category = Category.objects.get(pk=category_id)
+        except Category.DoesNotExist:
+            return []
+
+        descendant_ids = [category.id]
+        
+        # 简单递归获取子孙 (对于非常深的层级或大量数据，可能需要优化)
+        # 或者使用 django-mptt 等库
+        children = category.children.all()
+        queue = list(children)
+        
+        while queue:
+            child = queue.pop(0)
+            descendant_ids.append(child.id)
+            queue.extend(list(child.children.all()))
+            
+        return list(set(descendant_ids)) # 使用 set 去重（理论上不应该有重复）
+
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        # 普通用户只能看到已发布的文章，或者自己的草稿
-        if not self.request.user.is_staff: # 如果不是管理员
-            if self.action == 'list': # 列表视图
-                # 如果是草稿箱请求，则只返回当前用户的草稿
+        queryset = super().get_queryset() # 获取基础 queryset
+
+        # 处理用户权限和状态筛选 (如你之前的逻辑)
+        user = self.request.user
+        if not user.is_staff:
+            if self.action == 'list':
                 status_filter = self.request.query_params.get('status')
                 if status_filter == 'draft':
-                    return queryset.filter(author=self.request.user, status='draft')
-                # 否则只返回已发布的
-                return queryset.filter(status='published')
-            # 对于详情视图，如果是草稿，只有作者能看
-            # 这个逻辑最好放在 has_object_permission 中，但这里也可以简单处理
+                    queryset = queryset.filter(author=user, status='draft')
+                else:
+                    queryset = queryset.filter(status='published')
+            # 对于详情等，权限类会处理
+
+        # 自定义处理分类筛选
+        category_id_param = self.request.query_params.get('category')
+        if category_id_param:
+            try:
+                # 允许传递多个分类ID，用逗号分隔 (如果前端支持这种交互)
+                # category_ids_str = category_id_param.split(',')
+                # category_ids_to_filter = []
+                # for cat_id_str in category_ids_str:
+                #     category_ids_to_filter.extend(self._get_category_with_descendants(int(cat_id_str.strip())))
+                
+                # 当前前端只传递一个 category_id
+                category_ids_to_filter = self._get_category_with_descendants(int(category_id_param))
+
+                if category_ids_to_filter:
+                    queryset = queryset.filter(category__id__in=category_ids_to_filter)
+                else:
+                    # 如果传入的 category_id 无效或没有子孙，则不返回任何结果（或根据业务逻辑处理）
+                    queryset = queryset.none() 
+            except ValueError:
+                # category_id 不是有效的整数，可以忽略或返回错误
+                pass # 或者 queryset = queryset.none()
+
+        # 管理员可以按 status 参数筛选，如果 status 为空字符串，则不过滤 status
+        if user.is_staff:
+            status_filter_admin = self.request.query_params.get('status')
+            if status_filter_admin: # 只有当 status 参数明确提供时才过滤
+                 queryset = queryset.filter(status=status_filter_admin)
+            # 如果 status_filter_admin 为空或未提供，则不过滤状态，返回所有状态的文章（配合上面的分类筛选）
+
+
         return queryset
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
     def perform_update(self, serializer):
-        # 确保只有作者或管理员可以更新
-        # IsAuthorOrReadOnly 权限类已经处理了这个
         serializer.save()
-
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.select_related('author', 'article').all()

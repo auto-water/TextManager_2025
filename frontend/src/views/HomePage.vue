@@ -6,33 +6,49 @@
         <input
           type="search"
           v-model="searchQuery"
-          @keyup.enter="performSearch(1)"
-          placeholder="搜索文章标题、内容..."
+          @keyup.enter="handleSearchTrigger"
+          placeholder="搜索文章..."
           class="search-input"
         />
-        <!-- 使用新的 categoriesForSelect getter -->
-        <select v-model="selectedCategory" @change="performSearch(1)" class="category-select">
-          <option value="">所有分类</option>
-          <!-- 遍历处理过的带有层级前缀的分类列表 -->
-          <option v-for="cat in formattedCategories" :key="cat.id" :value="cat.id">
-            {{ cat.name }} <!-- cat.name 现在已经包含了缩进前缀 -->
+
+        <!-- 一级分类 -->
+        <select v-model="selectedLevel1Category" @change="onLevel1Change" class="category-select">
+          <option value="">选择一级分类</option>
+          <option v-for="cat in level1Categories" :key="cat.id" :value="cat.id">
+            {{ cat.name }}
           </option>
         </select>
-        <!-- 管理员可以筛选文章状态 -->
-        <select v-if="isAdminView" v-model="selectedStatus" @change="performSearch(1)" class="status-select">
+
+        <!-- 二级分类 -->
+        <select v-if="level1Categories.length > 0 && selectedLevel1Category" v-model="selectedLevel2Category" @change="onLevel2Change" class="category-select">
+          <option value="">选择二级分类</option>
+          <option v-for="cat in level2Categories" :key="cat.id" :value="cat.id">
+            {{ cat.name }}
+          </option>
+        </select>
+
+        <!-- 三级分类 -->
+        <select v-if="level2Categories.length > 0 && selectedLevel2Category" v-model="selectedLevel3Category" @change="handleSearchTrigger" class="category-select">
+          <option value="">选择三级分类</option>
+          <option v-for="cat in level3Categories" :key="cat.id" :value="cat.id">
+            {{ cat.name }}
+          </option>
+        </select>
+
+        <select v-if="isAdminView" v-model="selectedStatus" @change="handleSearchTrigger" class="status-select">
           <option value="">所有状态</option>
           <option value="published">已发布</option>
           <option value="draft">草稿</option>
         </select>
-        <button @click="performSearch(1)" class="button search-button">搜索</button>
+        <button @click="handleSearchTrigger" class="button search-button">搜索</button>
       </div>
-      <div class="view-toggle">
+      <!-- ... (view toggle, loading, error, articles list, pagination - 基本不变) ... -->
+       <div class="view-toggle">
         <button @click="viewMode = 'grid'" :class="{active: viewMode === 'grid'}">网格视图</button>
         <button @click="viewMode = 'list'" :class="{active: viewMode === 'list'}">列表视图</button>
       </div>
     </header>
 
-    <!-- ... (rest of the template remains the same) ... -->
     <div v-if="isLoading" class="loading-indicator">
       <p>加载文章中...</p>
     </div>
@@ -65,38 +81,70 @@
         下一页 »
       </button>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useStore } from 'vuex';
 import ArticleCard from '@/components/ArticleCard.vue';
 
 const store = useStore();
 
 const searchQuery = ref('');
-const selectedCategory = ref('');
+const selectedLevel1Category = ref('');
+const selectedLevel2Category = ref('');
+const selectedLevel3Category = ref('');
 const selectedStatus = ref('');
 const viewMode = ref('grid');
 const isDeleting = ref(null);
 
 const articles = computed(() => store.getters['article/allArticles']);
-// 使用新的 getter 来获取格式化后的分类列表
-const formattedCategories = computed(() => store.getters['category/categoriesForSelect']);
-// 如果你的分类数据仍在 article 模块，则使用:
-// const formattedCategories = computed(() => store.getters['article/categoriesForSelect']);
+// 从 store 获取原始的、扁平的分类列表
+const allRawCategories = computed(() => store.getters['category/allCategoriesRaw']); // 假设在 category.js 中
 
-const isLoading = computed(() => store.getters['article/articleIsLoading'] || store.getters['category/categoryIsLoading']); // 包含分类加载状态
-const error = computed(() => store.getters['article/articleError'] || store.getters['category/categoryError']); // 包含分类错误状态
+const isLoading = computed(() => store.getters['article/articleIsLoading'] || store.getters['category/categoryIsLoading']);
+const error = computed(() => store.getters['article/articleError'] || store.getters['category/categoryError']);
 const pagination = computed(() => store.getters['article/articlePagination']);
 const currentUser = computed(() => store.getters['user/currentUser']);
 const isAdminView = computed(() => currentUser.value && currentUser.value.is_staff);
 
+// 计算属性，用于动态生成各级分类的选项
+const level1Categories = computed(() => {
+  return allRawCategories.value.filter(cat => !cat.parent); // parent 为 null 或 undefined
+});
+
+const level2Categories = computed(() => {
+  if (!selectedLevel1Category.value) return [];
+  return allRawCategories.value.filter(cat => cat.parent === selectedLevel1Category.value);
+});
+
+const level3Categories = computed(() => {
+  if (!selectedLevel2Category.value) return [];
+  return allRawCategories.value.filter(cat => cat.parent === selectedLevel2Category.value);
+});
+
+// 当一级分类变化时
+const onLevel1Change = () => {
+  selectedLevel2Category.value = ''; // 重置二级选择
+  selectedLevel3Category.value = ''; // 重置三级选择
+  handleSearchTrigger(); // 触发搜索
+};
+
+// 当二级分类变化时
+const onLevel2Change = () => {
+  selectedLevel3Category.value = ''; // 重置三级选择
+  handleSearchTrigger(); // 触发搜索
+};
+
+// 实际触发搜索的函数
+const handleSearchTrigger = () => {
+  performSearch(1); // 总是从第一页开始搜索
+};
+
+
 const fetchInitialData = async () => {
-  // 根据你的 store 模块名调整
-  store.dispatch('category/fetchCategories'); // 或者 'article/fetchCategories'
+  store.dispatch('category/fetchCategories'); // 获取所有分类数据
   performSearch(1);
 };
 
@@ -106,9 +154,19 @@ const performSearch = (page = 1) => {
     statusToFetch = selectedStatus.value || '';
   }
 
+  // 确定最终用于搜索的分类ID
+  let categoryToSearch = '';
+  if (selectedLevel3Category.value) {
+    categoryToSearch = selectedLevel3Category.value;
+  } else if (selectedLevel2Category.value) {
+    categoryToSearch = selectedLevel2Category.value;
+  } else if (selectedLevel1Category.value) {
+    categoryToSearch = selectedLevel1Category.value;
+  }
+
   store.dispatch('article/fetchArticles', {
     search: searchQuery.value,
-    category: selectedCategory.value,
+    category: categoryToSearch,
     status: statusToFetch,
     page: Number(page)
   });
@@ -129,8 +187,11 @@ const handleDeleteArticle = async (articleId) => {
     if (articles.value.length === 0 && pagination.value.currentPage > 1) {
       performSearch(pagination.value.currentPage - 1);
     } else if (articles.value.length === 0 && pagination.value.currentPage === 1) {
+       // 如果删除后当前页为空且是第一页，重新加载第一页
       performSearch(1);
     }
+    // 如果列表是响应式的，删除后会自动更新，可能不需要显式重新 performSearch
+    // 但如果为了确保分页等正确，可以保留
   } catch (err) {
     console.error('Failed to delete article from list:', err);
     store.commit('article/SET_ERROR', '删除文章失败，请重试。');
@@ -142,6 +203,12 @@ const handleDeleteArticle = async (articleId) => {
 onMounted(() => {
   fetchInitialData();
 });
+
+// 如果希望在分类选择后立即搜索，而不是等待点击搜索按钮，
+// 可以在 onLevel1Change, onLevel2Change, 和三级分类的 @change 事件中直接调用 performSearch(1)
+// 当前代码中，onLevel1Change 和 onLevel2Change 已经调用了 handleSearchTrigger，
+// 三级分类的 @change 也调用了 handleSearchTrigger。
+// 搜索按钮的 @click 也调用了 handleSearchTrigger。这是合理的。
 </script>
 
 <style scoped>
@@ -293,5 +360,15 @@ onMounted(() => {
 }
 .some-element {
   width: 1300px; /* 如果视口小于1300px，就会出现滚动条 */
+}
+.search-controls {
+  /* ... */
+  gap: 0.75rem; /* 调整间距以容纳更多下拉框 */
+}
+.category-select {
+  /* 确保宽度适合 */
+  min-width: 150px; /* 或者根据内容调整 */
+  flex-basis: 180px; /* 基础宽度 */
+  flex-grow: 0; /* 不随空间增长 */
 }
 </style>
