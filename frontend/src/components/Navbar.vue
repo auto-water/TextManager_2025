@@ -39,7 +39,14 @@
             <!-- 将下拉菜单移动到App根元素，避免被其他组件的z-index影响 -->
             <teleport to="body">
               <div class="dropdown-menu" :class="{ 'show': isDropdownOpen }" :style="dropdownPosition">
+                <router-link to="/my-articles" class="dropdown-item" @click="closeDropdown">
+                  我的文章
+                </router-link>
+                <router-link to="/drafts" class="dropdown-item" @click="closeDropdown">
+                  我的草稿
+                </router-link>
                 <div v-if="isAdmin" class="admin-links">
+                  <div class="dropdown-divider"></div>
                   <router-link to="/categories" class="dropdown-item" @click="closeDropdown">
                     分类管理
                   </router-link>

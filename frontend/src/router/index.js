@@ -9,6 +9,7 @@ const HomePage = () => import('../views/HomePage.vue')
 const ArticleEditor = () => import('../views/ArticleEditor.vue')
 const DraftsPage = () => import('../views/DraftsPage.vue')
 const ArticleDetail = () => import('../views/ArticleDetail.vue')
+const MyArticlesPage = () => import('../views/MyArticlesPage.vue') // 新增导入
 const CategoryManager = () => import('../views/CategoryManager.vue')
 const AdminUserManager = () => import('../views/AdminUserManager.vue')
 const ExplorePage = () => import('../views/ExplorePage.vue') // 新增导入
@@ -50,6 +51,12 @@ const routes = [
     component: ArticleDetail,
     props: true,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/my-articles',
+    name: 'MyArticles',
+    component: MyArticlesPage,
+    meta: { requiresAuth: true }
   },
   {
     path: '/categories',

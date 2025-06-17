@@ -71,12 +71,17 @@ const mutations = {
 };
 
 const actions = {
-  async fetchArticles({ commit, state }, { search = '', category = '', status = 'published', page = 1 } = {}) {
+  async fetchArticles({ commit, state }, { search = '', category = '', status = 'published', page = 1, author = '' } = {}) {
     commit('SET_LOADING', true);
     commit('CLEAR_ERROR');
     try {
       const params = { search, status, page, page_size: state.pagination.pageSize };
+      
+      // 如果提供了分类，添加分类参数
       if (category) params.category = category;
+      
+      // 添加author参数，确保作者筛选正确传递
+      if (author) params.author = author;
 
       const response = await axios.get('/articles/', { params });
       commit('SET_ARTICLES', response.data);
