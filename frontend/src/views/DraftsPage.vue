@@ -62,7 +62,8 @@ const fetchDraftsPageData = (page = 1) => {
   // Fetch draft articles for the current user
   store.dispatch('article/fetchArticles', {
     status: 'draft',
-    page: page
+    page: page,
+    author: 'me' // 添加author=me参数，确保即使是管理员也只能看到自己的草稿
     // Backend should automatically filter by request.user for drafts
   });
 };
@@ -160,6 +161,18 @@ const changePage = (newPage) => {
   font-size: 0.9em;
   cursor: pointer;
   border: 1px solid transparent;
+  min-width: 60px; /* 确保最小宽度相同 */
+  width: 60px; /* 固定宽度，确保两个按钮完全相同宽度 */
+  text-align: center; /* 文本居中 */
+  display: inline-flex; /* 使用inline-flex替代inline-block */
+  justify-content: center; /* 水平居中 */
+  align-items: center; /* 垂直居中 */
+  height: 32px; /* 固定高度 */
+  box-sizing: border-box; /* 确保内边距和边框包含在宽度内 */
+  font-weight: normal; /* 统一字重 */
+  transition: background-color 0.2s; /* 统一过渡效果 */
+  margin: 0; /* 移除所有外边距 */
+  vertical-align: middle; /* 垂直对齐 */
 }
 .action-button.edit {
   background-color: #42b983;
@@ -176,7 +189,7 @@ const changePage = (newPage) => {
   background-color: #ee3058;
 }
 .action-button:disabled {
-  background-color: #ccc;
+  opacity: 0.7;
   cursor: not-allowed;
 }
 .loading-indicator, .error-message {
