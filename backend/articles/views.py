@@ -3,7 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import Article, Comment, Category
 from .serializers import ArticleSerializer, CommentSerializer, CategorySerializer
 from .permissions import IsAuthorOrReadOnly, IsAdminOrReadOnly
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,  AllowAny
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -28,7 +28,7 @@ class GenerateSummaryAPIView(APIView):
             response = client.chat.completions.create(
                 model="glm-z1-flash",
                 messages=[
-                    {"role": "user", "content": f"仅输出以下内容的摘要，不要包含任何其他文字：{content}"}
+                    {"role": "user", "content": f"生成这段内容的摘要，不要输出任何多余文字：{content}"}
                 ],
                 max_tokens=1000,
                 temperature=0.2
