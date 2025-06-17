@@ -31,7 +31,7 @@ const persistedState = loadState();
 
 const store = createStore({
   modules: {
-    rootuser: userModule,
+    user: userModule,
     article: articleModule,
     category: categoryModule
   },
@@ -45,8 +45,8 @@ store.subscribe((mutation, state) => {
   // 例如，只持久化 user 模块的 token 和 currentUser
   const stateToPersist = {
     user: {
-      token: state.rootuser.token,
-      currentUser: state.rootuser.currentUser
+      token: state.user.token,
+      currentUser: state.user.currentUser
     }
     // 如果需要，可以添加其他模块的持久化数据
   };
