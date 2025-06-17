@@ -3,47 +3,55 @@
     <header class="home-header">
       <h1>{{ isAdminView ? '文章管理 (管理员)' : '发现文章' }}</h1>
       <div class="search-controls">
-        <input
-          type="search"
-          v-model="searchQuery"
-          @keyup.enter="handleSearchTrigger"
-          placeholder="搜索文章..."
-          class="search-input"
-        />
+        <!-- 第一行：搜索输入框和搜索按钮 -->
+        <div class="search-row">
+          <input
+            type="search"
+            v-model="searchQuery"
+            @keyup.enter="handleSearchTrigger"
+            placeholder="搜索文章..."
+            class="search-input"
+          />
+          <button @click="handleSearchTrigger" class="button search-button">搜索</button>
+        </div>
+        
+        <!-- 第二行：分类选择器 -->
+        <div class="category-row">
+          <div class="category-selectors">
+            <!-- 一级分类 -->
+            <select v-model="selectedLevel1Category" @change="onLevel1Change" class="category-select">
+              <option value="">选择一级分类</option>
+              <option v-for="cat in level1Categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </option>
+            </select>
 
-        <!-- 一级分类 -->
-        <select v-model="selectedLevel1Category" @change="onLevel1Change" class="category-select">
-          <option value="">选择一级分类</option>
-          <option v-for="cat in level1Categories" :key="cat.id" :value="cat.id">
-            {{ cat.name }}
-          </option>
-        </select>
+            <!-- 二级分类 -->
+            <select v-if="level1Categories.length > 0 && selectedLevel1Category" v-model="selectedLevel2Category" @change="onLevel2Change" class="category-select">
+              <option value="">选择二级分类</option>
+              <option v-for="cat in level2Categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </option>
+            </select>
 
-        <!-- 二级分类 -->
-        <select v-if="level1Categories.length > 0 && selectedLevel1Category" v-model="selectedLevel2Category" @change="onLevel2Change" class="category-select">
-          <option value="">选择二级分类</option>
-          <option v-for="cat in level2Categories" :key="cat.id" :value="cat.id">
-            {{ cat.name }}
-          </option>
-        </select>
-
-        <!-- 三级分类 -->
-        <select v-if="level2Categories.length > 0 && selectedLevel2Category" v-model="selectedLevel3Category" @change="handleSearchTrigger" class="category-select">
-          <option value="">选择三级分类</option>
-          <option v-for="cat in level3Categories" :key="cat.id" :value="cat.id">
-            {{ cat.name }}
-          </option>
-        </select>
-
-        <select v-if="isAdminView" v-model="selectedStatus" @change="handleSearchTrigger" class="status-select">
-          <option value="">所有状态</option>
-          <option value="published">已发布</option>
-          <option value="draft">草稿</option>
-        </select>
-        <button @click="handleSearchTrigger" class="button search-button">搜索</button>
+            <!-- 三级分类 -->
+            <select v-if="level2Categories.length > 0 && selectedLevel2Category" v-model="selectedLevel3Category" @change="handleSearchTrigger" class="category-select">
+              <option value="">选择三级分类</option>
+              <option v-for="cat in level3Categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </option>
+            </select>
+          </div>
+          
+          <select v-if="isAdminView" v-model="selectedStatus" @change="handleSearchTrigger" class="status-select">
+            <option value="">所有状态</option>
+            <option value="published">已发布</option>
+            <option value="draft">草稿</option>
+          </select>
+        </div>
       </div>
-      <!-- ... (view toggle, loading, error, articles list, pagination - 基本不变) ... -->
-       <div class="view-toggle">
+      
+      <div class="view-toggle">
         <button @click="viewMode = 'grid'" :class="{active: viewMode === 'grid'}">网格视图</button>
         <button @click="viewMode = 'list'" :class="{active: viewMode === 'list'}">列表视图</button>
       </div>
@@ -137,6 +145,15 @@ const onLevel2Change = () => {
   handleSearchTrigger(); // 触发搜索
 };
 
+// 设置默认技术分类的函数
+const setDefaultTechCategory = () => {
+  const techCategory = level1Categories.value.find(cat => cat.name === '技术');
+  if (techCategory) {
+    selectedLevel1Category.value = techCategory.id;
+    onLevel1Change(); // 触发二级分类加载和搜索
+  }
+};
+
 // 实际触发搜索的函数
 const handleSearchTrigger = () => {
   performSearch(1); // 总是从第一页开始搜索
@@ -144,7 +161,9 @@ const handleSearchTrigger = () => {
 
 
 const fetchInitialData = async () => {
-  store.dispatch('category/fetchCategories'); // 获取所有分类数据
+  await store.dispatch('category/fetchCategories'); // 获取所有分类数据
+  // 在分类数据加载完成后设置默认技术分类
+  setDefaultTechCategory();
   performSearch(1);
 };
 
@@ -204,11 +223,12 @@ onMounted(() => {
   fetchInitialData();
 });
 
-// 如果希望在分类选择后立即搜索，而不是等待点击搜索按钮，
-// 可以在 onLevel1Change, onLevel2Change, 和三级分类的 @change 事件中直接调用 performSearch(1)
-// 当前代码中，onLevel1Change 和 onLevel2Change 已经调用了 handleSearchTrigger，
-// 三级分类的 @change 也调用了 handleSearchTrigger。
-// 搜索按钮的 @click 也调用了 handleSearchTrigger。这是合理的。
+// 监听level1Categories的变化，当它变化时尝试设置默认技术分类
+watch(level1Categories, (newCategories) => {
+  if (newCategories.length > 0 && !selectedLevel1Category.value) {
+    setDefaultTechCategory();
+  }
+});
 </script>
 
 <style scoped>
@@ -235,29 +255,70 @@ onMounted(() => {
 
 .search-controls {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 1rem; /* Increased gap */
   margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  max-width: 900px; /* Wider search area */
+  max-width: 900px;
   margin-left: auto;
   margin-right: auto;
   box-sizing: border-box;
 }
 
-/* Using global styles for input, select, button from App.vue */
-/* Specific overrides or additions for HomePage if needed */
+/* 第一行样式 */
+.search-row {
+  display: flex;
+  width: 100%;
+  margin-bottom: 0.75rem;
+  gap: 0.75rem;
+}
+
+/* 第二行样式 */
+.category-row {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: nowrap; /* 防止分类选择器换行 */
+}
+
+/* 分类选择器容器 */
+.category-selectors {
+  display: flex;
+  flex: 1;
+  gap: 0.75rem; /* 各分类选择器之间的间距 */
+}
+
 .search-input {
-  min-width: 250px; /* Adjust as needed */
-  flex: 1 1 300px; /* Allow flexible growth */
+  flex: 1;
+  min-width: 0; /* 允许缩小 */
+  margin-bottom: 0;
 }
 .category-select, .status-select {
-  min-width: 150px;
-  flex: 0 1 200px; /* Don't grow too much */
+  flex: 1;
+  min-width: 0; /* 允许缩小到小于 min-width 的宽度 */
+  margin-bottom: 0;
+}
+
+/* 状态选择器样式 */
+.status-select {
+  max-width: 150px; /* 限制状态选择器宽度 */
 }
 .search-button {
-  flex-shrink: 0; /* Prevent button from shrinking */
+  flex-shrink: 0;
+  height: 40px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* 确保所有输入元素高度一致 */
+.search-controls input,
+.search-controls select,
+.search-controls button {
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
 }
 
 .view-toggle {
