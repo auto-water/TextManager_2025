@@ -27,17 +27,25 @@ const saveState = (state) => {
   }
 };
 
-const persistedState = loadState();
-
 const store = createStore({
   modules: {
     user: userModule,
     article: articleModule,
     category: categoryModule
   },
-  // 如果使用了 loadState，则用它来初始化 state
-  state: persistedState ? persistedState : {}, // 合并模块的初始 state
 })
+
+// 如果有持久化的数据，选择性地恢复到对应的模块中
+const persistedState = loadState();
+if (persistedState && persistedState.user) {
+  // 只恢复需要的字段，而不是整个状态对象
+  if (persistedState.user.token) {
+    store.state.user.token = persistedState.user.token;
+  }
+  if (persistedState.user.currentUser) {
+    store.state.user.currentUser = persistedState.user.currentUser;
+  }
+}
 
 // 每次 state 变化时保存到 localStorage
 store.subscribe((mutation, state) => {
