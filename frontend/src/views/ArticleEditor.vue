@@ -27,10 +27,10 @@
 
 
       <div class="actions">
-        <button type="button" @click="handleSaveAsDraft" :disabled="isLoading">
+        <button type="button" @click="handleSaveAsDraft" :disabled="isLoading" class="draft-button">
           {{ isLoading && currentAction === 'draft' ? '保存中...' : '保存草稿' }}
         </button>
-        <button type="submit" :disabled="isLoading">
+        <button type="submit" :disabled="isLoading" class="publish-button">
           {{ isLoading && currentAction === 'publish' ? '发布中...' : '发布文章' }}
         </button>
          <button type="button" @click="goBack" class="cancel-button">取消</button>
@@ -184,21 +184,81 @@ const goBack = () => {
   font-weight: 600;
   color: #444;
 }
+/* 表单元素样式：使用白色背景 */
+.form-group input,
+.form-group select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  font-size: 1.08rem;
+  border: 1px solid #ced4da; /* 更柔和的灰色边框 */
+  border-radius: 7px;
+  background: #ffffff; /* 纯白色背景 */
+  transition: border 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #80bdff; /* 聚焦时的边框颜色 */
+  box-shadow: 0 2px 8px rgba(0,123,255,0.08);
+}
 .actions {
   margin-top: 30px;
   display: flex;
   justify-content: flex-end; /* Align buttons to the right */
   gap: 10px;
 }
+
 .actions button {
   padding: 10px 20px;
+  border-radius: 5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
+
+/* 取消按钮样式 */
 .cancel-button {
-    background-color: #6c757d; /* A neutral or secondary color */
-    border-color: #6c757d;
+  background-color: #f8f9fa; /* 浅灰色背景 */
+  border: 1px solid #ced4da;
+  color: #6c757d; /* 中灰色字体 */
 }
+
 .cancel-button:hover {
-    background-color: #5a6268;
+  background-color: #e9ecef;
+  color: #495057; /* 悬停时加深颜色 */
+}
+
+/* 保存草稿按钮样式 */
+.draft-button {
+  background-color: #e9ecef; /* 浅灰色背景 */
+  border: 1px solid #ced4da;
+  color: #495057; /* 深灰色字体 */
+}
+
+.draft-button:hover {
+  background-color: #dee2e6;
+  color: #212529; /* 悬停时加深颜色 */
+}
+
+/* 发布文章按钮样式 */
+.publish-button {
+  background-color: #007bff; /* 蓝色背景 */
+  border: 1px solid #0069d9;
+  color: white;
+}
+
+.publish-button:hover {
+  background-color: #0069d9;
+}
+
+/* 禁用状态 */
+.actions button:disabled {
+  background-color: #e9ecef;
+  border-color: #ced4da;
+  color: #adb5bd;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 .success-message {
   color: green;

@@ -29,13 +29,30 @@
       
       <div class="navbar-end">
         <div v-if="isAuthenticated && currentUser" class="user-actions">
-          <div class="user-info">
-            <span class="user-greeting">你好, {{ currentUser.username }}</span>
-            <div class="admin-links" v-if="isAdmin">
-              <router-link to="/categories" class="admin-link">分类管理</router-link>
-              <router-link to="/admin/users" class="admin-link">用户管理</router-link>
-            </div>
-            <button @click="handleLogout" class="button is-danger is-small">登出</button>
+          <span class="user-greeting">你好, {{ currentUser.username }}</span>
+          <div class="user-dropdown">
+            <button class="user-avatar-btn" @click="toggleDropdown">
+              <div class="user-avatar">
+                <span>{{ currentUser.username.charAt(0).toUpperCase() }}</span>
+              </div>
+            </button>
+            <!-- 将下拉菜单移动到App根元素，避免被其他组件的z-index影响 -->
+            <teleport to="body">
+              <div class="dropdown-menu" :class="{ 'show': isDropdownOpen }" :style="dropdownPosition">
+                <div v-if="isAdmin" class="admin-links">
+                  <router-link to="/categories" class="dropdown-item" @click="closeDropdown">
+                    分类管理
+                  </router-link>
+                  <router-link to="/admin/users" class="dropdown-item" @click="closeDropdown">
+                    用户管理
+                  </router-link>
+                </div>
+                <div class="dropdown-divider"></div>
+                <button @click="handleLogout" class="dropdown-item logout-item">
+                  登出
+                </button>
+              </div>
+            </teleport>
           </div>
         </div>
         <div v-else class="auth-actions">
@@ -48,26 +65,99 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 
 const store = useStore();
 const router = useRouter();
+const isDropdownOpen = ref(false);
+const dropdownPosition = ref({});
 
 const isAuthenticated = computed(() => store.getters['user/isAuthenticated']);
 const currentUser = computed(() => store.getters['user/currentUser']);
 const isAdmin = computed(() => store.getters['user/isAdmin']);
 
+const toggleDropdown = async () => {
+  isDropdownOpen.value = !isDropdownOpen.value;
+  
+  // 如果打开了下拉菜单，计算位置
+  if (isDropdownOpen.value) {
+    await nextTick();
+    const btnElement = document.querySelector('.user-avatar-btn');
+    if (btnElement) {
+      const rect = btnElement.getBoundingClientRect();
+      dropdownPosition.value = {
+        position: 'fixed',
+        top: `${rect.bottom + 8}px`,
+        right: `${window.innerWidth - rect.right}px`
+      };
+    }
+  }
+};
+
+const closeDropdown = () => {
+  isDropdownOpen.value = false;
+};
+
+// 点击页面任何地方关闭下拉菜单
+const closeDropdownOnOutsideClick = (event) => {
+  const dropdown = document.querySelector('.dropdown-menu');
+  const avatarBtn = document.querySelector('.user-avatar-btn');
+  if (
+    isDropdownOpen.value && 
+    dropdown && 
+    avatarBtn && 
+    !dropdown.contains(event.target) && 
+    !avatarBtn.contains(event.target)
+  ) {
+    closeDropdown();
+  }
+};
+
+// 在组件挂载时添加全局点击事件监听器
+onMounted(() => {
+  document.addEventListener('click', closeDropdownOnOutsideClick);
+});
+
+// 在组件卸载时清除事件监听器
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeDropdownOnOutsideClick);
+});
+
 const handleLogout = async () => {
   try {
     await store.dispatch('user/logoutUser');
+    closeDropdown();
     router.push('/login');
   } catch (error) {
     console.error('Logout failed:', error);
   }
 };
 </script>
+
+<style>
+/* 全局样式，确保下拉菜单在所有内容之上 */
+.dropdown-menu {
+  position: fixed !important; /* 使用fixed定位，确保相对于视口 */
+  z-index: 9999 !important; /* 非常高的z-index */
+  background: white;
+  min-width: 180px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+  overflow: hidden;
+}
+
+.dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+</style>
 
 <style scoped>
 .navbar {
@@ -222,17 +312,11 @@ const handleLogout = async () => {
   align-items: center;
 }
 
+/* 用户信息和下拉菜单样式 */
 .user-actions {
   display: flex;
   align-items: center;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  gap: 10px;
 }
 
 .user-greeting {
@@ -240,83 +324,110 @@ const handleLogout = async () => {
   font-weight: 700;
   font-size: 1.05rem;
   white-space: nowrap;
-  background-color: #f0f7ff;
-  padding: 0.4rem 0.8rem;
-  border-radius: 0.6rem;
-  box-shadow: 0 2px 8px rgba(25,118,210,0.08);
+  padding: 0.4rem 0;
+}
+
+.user-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.user-avatar-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  position: relative;
+}
+
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1976d2, #42b983);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 3px 12px rgba(25, 118, 210, 0.3);
+}
+
+.dropdown-menu {
+  position: fixed !important; /* 使用fixed定位，确保相对于视口 */
+  z-index: 9999 !important; /* 非常高的z-index */
+  background: white;
+  min-width: 180px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+  overflow: hidden;
+}
+
+.dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: flex;
+  justify-content: center;
+  align-items: center; /* 添加垂直居中 */
+  padding: 12px 16px;
+  color: #495057;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  box-sizing: border-box; /* 确保内边距包含在宽度内 */
+  font-size: 0.95rem;
+}
+
+.dropdown-icon {
+  margin-right: 10px;
+  font-style: normal;
+  font-size: 1.1rem;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: #1976d2;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #e9ecef;
+  margin: 4px 0;
 }
 
 .admin-links {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+  border-bottom: none;
 }
 
-.admin-link {
-  font-size: 0.9rem;
-  color: #5a6888;
-  font-weight: 600;
-  border: 1px solid #e3f2fd;
-  border-radius: 0.6rem;
-  padding: 0.35rem 0.7rem;
-  background: #f5faff;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  white-space: nowrap;
+.logout-item {
+  color: #dc3545;
 }
 
-.admin-link:hover {
-  color: #1976d2;
-  background: #e3f2fd;
-  border-color: #bbdefb;
-  transform: translateY(-1px);
-  box-shadow: 0 3px 10px rgba(25,118,210,0.1);
-}
-
-.navbar-end .button.is-small {
-  padding: 0.35rem 0.9rem;
-  font-size: 0.92rem;
-  border-radius: 0.6rem;
-  white-space: nowrap;
-  font-weight: 600;
-  box-shadow: 0 2px 6px rgba(220,53,69,0.2);
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.navbar-end .button.is-small:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(220,53,69,0.25);
-}
-
-.auth-actions {
-  display: flex;
-  gap: 0.7rem;
-}
-
-.auth-actions .button {
-  padding: 0.4rem 1rem;
-  font-size: 0.95rem;
-  border-radius: 0.6rem;
-  font-weight: 600;
-  border: none;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.auth-actions .button.is-light {
-  background-color: #f8fafc;
-  color: #5a6888;
-}
-
-.auth-actions .button.is-primary {
-  background-color: #42b983;
-  color: white;
-}
-
-.auth-actions .button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+.logout-item:hover {
+  background-color: #fff5f5;
+  color: #c82333;
 }
 
 @media (max-width: 1024px) {
@@ -358,16 +469,16 @@ const handleLogout = async () => {
   }
   
   .user-info {
-    flex-wrap: wrap;
+    flex-wrap: nowrap; /* 修改为不换行 */
     justify-content: center;
     gap: 0.7rem;
   }
   
   .admin-links {
-    order: 1;
-    width: 100%;
+    order: 0; /* 改变顺序，不再是第一个 */
+    width: auto; /* 允许宽度自适应内容 */
     justify-content: center;
-    margin-bottom: 0.6rem;
+    margin-bottom: 0; /* 移除底部边距 */
   }
 }
 
@@ -412,13 +523,14 @@ const handleLogout = async () => {
   }
   
   .user-info {
-    flex-direction: column;
+    flex-direction: row; /* 改为行排列 */
     align-items: center;
     gap: 0.5rem;
+    flex-wrap: nowrap; /* 确保不换行 */
   }
   
   .user-greeting {
-    margin-bottom: 0.4rem;
+    margin-bottom: 0; /* 移除底部边距 */
     font-size: 0.95rem;
     padding: 0.35rem 0.7rem;
   }

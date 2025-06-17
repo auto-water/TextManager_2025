@@ -54,11 +54,13 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 24px; /* 稍微增加内边距 */
+  padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+  z-index: 1; /* 确保内容区域的z-index低于导航栏 */
+  position: relative; /* 使z-index生效 */
 }
 
 .main-content {
