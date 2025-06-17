@@ -1,0 +1,6 @@
+# Python缓存文件
+__pycache__/
+*.py[cod]
+
+.vscode/
+node_modules/
