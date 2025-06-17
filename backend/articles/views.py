@@ -87,8 +87,29 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset() # 获取基础 queryset
         user = self.request.user
+        
+        # 针对单篇文章的操作（详情、编辑、删除等）
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
+            article_id = self.kwargs.get('pk')
+            if user.is_authenticated and article_id:
+                # 允许用户访问：已发布的文章 或 自己的草稿
+                from django.db.models import Q
+                return Article.objects.filter(
+                    Q(id=article_id) & (Q(status='published') | Q(status='draft', author=user))
+                )
+        
+        # 处理列表请求
+        status_filter = self.request.query_params.get('status')
+        
+        # 对草稿的处理：无论是否管理员，都只能看到自己的草稿
+        if status_filter == 'draft':
+            # 始终只显示自己的草稿，即使是管理员
+            queryset = queryset.filter(author=user, status='draft')
+        # 已发布文章的逻辑保持不变
+        elif not user.is_staff:
+            queryset = queryset.filter(status='published')
         
         # 处理作者筛选参数
         author_param = self.request.query_params.get('author')
