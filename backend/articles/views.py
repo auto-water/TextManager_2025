@@ -88,47 +88,40 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset() # 获取基础 queryset
-
-        # 处理用户权限和状态筛选 (如你之前的逻辑)
         user = self.request.user
-        if not user.is_staff:
-            if self.action == 'list':
-                status_filter = self.request.query_params.get('status')
-                if status_filter == 'draft':
-                    queryset = queryset.filter(author=user, status='draft')
-                else:
-                    queryset = queryset.filter(status='published')
-            # 对于详情等，权限类会处理
+        
+        # 针对单篇文章的操作（详情、编辑、删除等）
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy']:
+            article_id = self.kwargs.get('pk')
+            if user.is_authenticated and article_id:
+                # 允许用户访问：已发布的文章 或 自己的草稿
+                from django.db.models import Q
+                return Article.objects.filter(
+                    Q(id=article_id) & (Q(status='published') | Q(status='draft', author=user))
+                )
+        
+        # 处理列表请求
+        status_filter = self.request.query_params.get('status')
+        
+        # 对草稿的处理：无论是否管理员，都只能看到自己的草稿
+        if status_filter == 'draft':
+            # 始终只显示自己的草稿，即使是管理员
+            queryset = queryset.filter(author=user, status='draft')
+        # 已发布文章的逻辑保持不变
+        elif not user.is_staff:
+            queryset = queryset.filter(status='published')
 
         # 自定义处理分类筛选
         category_id_param = self.request.query_params.get('category')
         if category_id_param:
             try:
-                # 允许传递多个分类ID，用逗号分隔 (如果前端支持这种交互)
-                # category_ids_str = category_id_param.split(',')
-                # category_ids_to_filter = []
-                # for cat_id_str in category_ids_str:
-                #     category_ids_to_filter.extend(self._get_category_with_descendants(int(cat_id_str.strip())))
-                
-                # 当前前端只传递一个 category_id
                 category_ids_to_filter = self._get_category_with_descendants(int(category_id_param))
-
                 if category_ids_to_filter:
                     queryset = queryset.filter(category__id__in=category_ids_to_filter)
                 else:
-                    # 如果传入的 category_id 无效或没有子孙，则不返回任何结果（或根据业务逻辑处理）
-                    queryset = queryset.none() 
+                    queryset = queryset.none()
             except ValueError:
-                # category_id 不是有效的整数，可以忽略或返回错误
-                pass # 或者 queryset = queryset.none()
-
-        # 管理员可以按 status 参数筛选，如果 status 为空字符串，则不过滤 status
-        if user.is_staff:
-            status_filter_admin = self.request.query_params.get('status')
-            if status_filter_admin: # 只有当 status 参数明确提供时才过滤
-                 queryset = queryset.filter(status=status_filter_admin)
-            # 如果 status_filter_admin 为空或未提供，则不过滤状态，返回所有状态的文章（配合上面的分类筛选）
-
+                pass
 
         return queryset
 

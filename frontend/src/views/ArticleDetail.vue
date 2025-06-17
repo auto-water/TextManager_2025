@@ -88,7 +88,8 @@ const isAdmin = computed(() => store.getters['user/isAdmin']);
 
 const canEditOrDelete = computed(() => {
   if (!currentUser.value || !article.value) return false;
-  return isAdmin.value || article.value.author?.id === currentUser.value.id;
+  // 修改权限逻辑：只有作者本人可以编辑/删除文章
+  return article.value.author?.id === currentUser.value.id;
 });
 
 const fetchArticle = (id) => {

@@ -398,6 +398,10 @@ const handleLogout = async () => {
   width: 100%;
   box-sizing: border-box; /* 确保内边距包含在宽度内 */
   font-size: 0.95rem;
+  text-align: center; /* 确保文本居中 */
+  font-weight: normal; /* 统一字体粗细 */
+  height: 44px; /* 统一高度 */
+  margin: 0; /* 移除外边距 */
 }
 
 .dropdown-icon {

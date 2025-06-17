@@ -42,12 +42,6 @@
               </option>
             </select>
           </div>
-          
-          <select v-if="isAdminView" v-model="selectedStatus" @change="handleSearchTrigger" class="status-select">
-            <option value="">所有状态</option>
-            <option value="published">已发布</option>
-            <option value="draft">草稿</option>
-          </select>
         </div>
       </div>
       
@@ -103,7 +97,6 @@ const searchQuery = ref('');
 const selectedLevel1Category = ref('');
 const selectedLevel2Category = ref('');
 const selectedLevel3Category = ref('');
-const selectedStatus = ref('');
 const viewMode = ref('grid');
 const isDeleting = ref(null);
 
@@ -168,10 +161,8 @@ const fetchInitialData = async () => {
 };
 
 const performSearch = (page = 1) => {
-  let statusToFetch = 'published';
-  if (isAdminView.value) {
-    statusToFetch = selectedStatus.value || '';
-  }
+  // 始终只显示已发布的文章，不再使用所有状态选项
+  const statusToFetch = 'published';
 
   // 确定最终用于搜索的分类ID
   let categoryToSearch = '';
@@ -294,7 +285,7 @@ watch(level1Categories, (newCategories) => {
   min-width: 0; /* 允许缩小 */
   margin-bottom: 0;
 }
-.category-select, .status-select {
+.category-select {
   flex: 1;
   min-width: 0; /* 允许缩小到小于 min-width 的宽度 */
   margin-bottom: 0;
