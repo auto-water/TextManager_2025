@@ -197,7 +197,7 @@ const resetForm = () => {
 
 const deleteCategory = async (categoryId) => {
   // ... (删除逻辑不变) ...
-  if (!confirm('确定要删除这个分类吗？（其下的文章将变为未分类）')) return;
+  if (!confirm('确定要删除这个分类吗？（警告：其下的文章将直接删除）')) return;
   isDeleting.value = categoryId;
   store.commit(`${CATEGORY_MODULE_NAMESPACE}/CLEAR_ERROR`);
   try {
