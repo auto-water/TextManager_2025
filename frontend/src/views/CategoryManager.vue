@@ -47,7 +47,6 @@
         <li v-for="cat in formattedCategoriesForDisplay" :key="cat.id" class="category-item">
           <span>{{ cat.name }}</span> <!-- name 已经包含了缩进 -->
           <div class="category-actions">
-            <button @click="editCategory(cat.originalData)" class="action-btn edit-btn">编辑</button>
             <button @click="deleteCategory(cat.id)" class="action-btn delete-btn" :disabled="isDeleting === cat.id">
                {{ isDeleting === cat.id ? '删除中...' : '删除' }}
             </button>
@@ -269,6 +268,7 @@ const deleteCategory = async (categoryId) => {
 .category-actions {
   display: flex;
   gap: 8px;
+  justify-content: flex-end; /* 确保单个按钮右对齐 */
 }
 .action-btn {
     padding: 5px 10px;

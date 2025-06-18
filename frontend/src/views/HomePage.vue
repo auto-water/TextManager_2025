@@ -9,7 +9,7 @@
             type="search"
             v-model="searchQuery"
             @keyup.enter="handleSearchTrigger"
-            placeholder="搜索文章..."
+            placeholder="搜索文章或内容..."
             class="search-input"
           />
           <button @click="handleSearchTrigger" class="button search-button">搜索</button>
