@@ -42,7 +42,9 @@
 
       <!-- AI摘要按钮 -->
       <div class="ai-summary">
-        <button @click="generateAbstract" class="button is-primary is-small">点击生成AI摘要</button>
+        <button @click="generateAbstract" class="button is-primary is-small" :disabled="isGeneratingAbstract">
+          {{ isGeneratingAbstract ? '摘要生成中...' : '点击生成AI摘要' }}
+        </button>
       </div>
 
       <!-- 显示生成的摘要 -->
@@ -64,7 +66,6 @@
 </template>
 
 <script setup>
-// ... (你提供的 script setup 部分，它是正确的) ...
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useRoute, useRouter } from 'vue-router';
@@ -79,6 +80,7 @@ const router = useRouter();
 const articleId = ref(route.params.id);
 const isDeleting = ref(false);
 const abstract = ref(''); // 用于存储生成的摘要
+const isGeneratingAbstract = ref(false); // 新增：用于控制摘要生成按钮状态
 
 const article = computed(() => store.getters['article/currentArticleDetail']);
 const isLoading = computed(() => store.getters['article/articleIsLoading']);
@@ -149,6 +151,8 @@ const generateAbstract = async () => {
   }
 
   try {
+    isGeneratingAbstract.value = true; // 开始生成，设置状态为true
+    
     const apiUrl = 'http://localhost:8000/api/generate-summary/';
     const requestBody = {
       content: article.value.content,
@@ -175,6 +179,8 @@ const generateAbstract = async () => {
   } catch (error) {
     console.error('生成摘要失败:', error);
     abstract.value = '生成摘要时发生错误，请稍后重试。';
+  } finally {
+    isGeneratingAbstract.value = false; // 无论成功或失败，最终设置状态为false
   }
 };
 
@@ -328,5 +334,11 @@ onBeforeUnmount(() => {
 }
 .not-found .button, .error-message .button {
     margin-top: 1rem;
+}
+
+/* 添加禁用状态的按钮样式 */
+.button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 </style>
